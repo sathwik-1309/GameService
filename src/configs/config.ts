@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379/10';
 const BOT_SERVICE_URL = process.env.BOT_SERVICE_URL || 'bot_service_url';
 
 const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY || 'jwt_secret_key';

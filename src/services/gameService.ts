@@ -1,15 +1,15 @@
 import { v4 as uuidv4 } from 'uuid'
-import redisClient from '../utils/redisClient'
-import { GAME_STATUS } from '../constants/gameConstants';
 import { BotService } from './botService';
 import { Game } from '../game/game';
+import RedisService from './redisService';
+import redisClient from '../utils/redisClient';
 
 export class GameService {
 
   public static async createGame(userIds: string[], numberOfBots: number): Promise<string> {
     const gameUid = uuidv4();
 
-    await redisClient.sAdd('active_games', gameUid)
+    await RedisService.sAdd('active_games', gameUid);
 
     const userPlayerMapping: Record<string, string> = {};
     userIds.forEach(userId => {
@@ -18,11 +18,11 @@ export class GameService {
 
     const botIds = await BotService.createBots(numberOfBots);
 
-    await redisClient.multi()
-        .hSet(`game:${gameUid}:user_player_id_mapping`, userPlayerMapping)
-        .sAdd(`game:${gameUid}:users`, userIds)
-        .sAdd(`game:${gameUid}:bots`, botIds)
-        .exec();
+    const transaction = redisClient.multi();
+    transaction.hSet(`game:${gameUid}:user_player_id_mapping`, userPlayerMapping);
+    transaction.sAdd(`game:${gameUid}:bots`, botIds);
+
+    await RedisService.execMulti(transaction);
 
     const game = new Game(gameUid);
     await game.initializeGame();
@@ -30,8 +30,8 @@ export class GameService {
     return gameUid;
   }
 
-  public static async getLiveGames(): Promise<string[]> {
-    return await redisClient.sMembers('active_games')
+  public static async getLiveGames(): Promise<string[] | null> {
+    return await RedisService.sMembers('active_games')
   }
 
   public static async getPlayerIdForUser(userId: Number, gameUid: string): Promise<string | null> {

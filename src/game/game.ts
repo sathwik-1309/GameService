@@ -1,6 +1,7 @@
 import { Deck } from './deck';
 import { redisClient } from '../utils/redisClient';
 import { GAME_STATUS } from '../constants/gameConstants';
+import RedisService from '../services/redisService';
 
 export class Game {
   private gameUid: string;
@@ -13,8 +14,8 @@ export class Game {
   public async initializeGame(): Promise<void> {
     console.log(`Initializing game: ${this.gameUid}`);
 
-    const userPlayerMapping = await redisClient.hGetAll(`game:${this.gameUid}:user_player_id_mapping`);
-    const botIds = await redisClient.sMembers(`game:${this.gameUid}:bots`);
+    const userPlayerMapping = await RedisService.hGetAll(`game:${this.gameUid}:user_player_id_mapping`);
+    const botIds = await RedisService.sMembers(`game:${this.gameUid}:bots`);
 
     const allPlayers = { ...userPlayerMapping, ...Object.fromEntries(botIds.map(botId => [botId, botId])) };
 
@@ -32,11 +33,11 @@ export class Game {
       }, {})
     };
 
-    await redisClient.multi()
-      .json.set(`game:${this.gameUid}:info`, '.', gameInfo)
-      .rPush(`game:${this.gameUid}:draw_pile`, this.deck.getRemainingCards())
-      .rPush(`game:${this.gameUid}:discard_pile`, [])
-      .exec();
+    const transaction = redisClient.multi();
+    transaction.json.set(`game:${this.gameUid}:info`, '.', gameInfo)
+    transaction.rPush(`game:${this.gameUid}:draw_pile`, this.deck.getRemainingCards())
+
+    await RedisService.execMulti(transaction);
 
     console.log(`Game ${this.gameUid} initialized!`);
   }

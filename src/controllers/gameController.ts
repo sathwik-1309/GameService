@@ -14,7 +14,7 @@ export class GameController {
       const userIds = user_ids.map((id: number) => id.toString());
       const gameUid = await GameService.createGame(userIds, number_of_bots);
 
-      res.json({ game_uid: gameUid });
+      res.status(201).json({ game_uid: gameUid });
     } catch (error) {
       next(error);
     }
